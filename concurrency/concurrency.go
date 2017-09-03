@@ -16,13 +16,48 @@ func main() {
 	switch example {
 	case "random-calculator":
 		randomCalculator()
+	case "count-down":
+		countDown()
 	default:
 		fmt.Println("Unknown example")
 	}
 }
 
 /*
-	START - Random Calculator
+	START - Generator
+	example for Generator pattern
+*/
+
+// countDown call the generator and handle every message
+// what came on the channel
+func countDown() {
+	for counter := range countDownGenerator(6) {
+		fmt.Printf("> %d\n", counter)
+	}
+}
+
+// countDownGenerator is generating the own communication channel
+// and return it for the caller function for usage
+// then start to count back from the parameter
+func countDownGenerator(from int) <-chan int {
+	c := make(chan int)
+	go func() {
+		for i := from; i > 0; i-- {
+			c <- i
+			time.Sleep(time.Duration(rand.Intn(1e3)) * time.Millisecond)
+		}
+		close(c)
+	}()
+	return c
+}
+
+/*
+	END - Generator
+*/
+
+/*
+	START - Random Calculator example
+	example for synchronize channels
 */
 
 // randomCalculator creating the communication channels
@@ -60,7 +95,7 @@ func worker(a, b, c chan int) {
 }
 
 /*
-	END - Random Calculator
+	END - Random Calculator example
 */
 
 /*
