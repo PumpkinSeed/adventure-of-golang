@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
@@ -18,10 +19,61 @@ func main() {
 		randomCalculator()
 	case "count-down":
 		countDown()
+	case "multiplexing":
+		multiplexing()
 	default:
 		fmt.Println("Unknown example")
 	}
 }
+
+/*
+	START - Multiplexing
+	example for Multiplexing pattern
+*/
+
+func fanIn(inputs ...<-chan string) <-chan string {
+	c := make(chan string)
+	for counter, input := range inputs {
+		go func(ch <-chan string, co int) {
+			for {
+				c <- getTag(co) + <-ch
+				time.Sleep(time.Duration(rand.Intn(1e3)) * time.Millisecond)
+			}
+		}(input, counter)
+	}
+	return c
+}
+
+func getTag(c int) string {
+	var tag string
+	for i := 0; i < c+1; i++ {
+		tag += ">>"
+	}
+	return tag
+}
+
+func multiplexing() {
+	c := fanIn(countDownGeneratorString(12), countDownGeneratorString(4), countDownGeneratorString(7))
+	for i := 0; i < 30; i++ {
+		fmt.Println(<-c)
+	}
+}
+
+func countDownGeneratorString(from int) <-chan string {
+	c := make(chan string)
+	go func() {
+		for i := from; i > 0; i-- {
+			c <- strconv.Itoa(i)
+			time.Sleep(time.Duration(rand.Intn(1e3)) * time.Millisecond)
+		}
+		close(c)
+	}()
+	return c
+}
+
+/*
+	END - Multiplexing
+*/
 
 /*
 	START - Generator
@@ -30,8 +82,14 @@ func main() {
 
 // countDown call the generator and handle every message
 // what came on the channel
+// the generator return the communication channel, and we can have more instance
 func countDown() {
-	for counter := range countDownGenerator(6) {
+	go func() {
+		for counter := range countDownGenerator(5) {
+			fmt.Printf(">>> %d\n", counter)
+		}
+	}()
+	for counter := range countDownGenerator(11) {
 		fmt.Printf("> %d\n", counter)
 	}
 }
