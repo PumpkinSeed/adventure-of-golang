@@ -31,12 +31,31 @@ func main() {
 	example for Multiplexing pattern
 */
 
-func fanIn(inputs ...<-chan string) <-chan string {
+// signal represent a communication signal layout
+type signal struct {
+	data string
+	done bool
+}
+
+func newSignal(data string, done bool) signal {
+	return signal{
+		data: data,
+		done: done,
+	}
+}
+
+// the fanIn function get n input signal, and create go routine for each of
+// when there is a message on the channel write into the response channel
+func fanIn(inputs ...<-chan signal) <-chan string {
 	c := make(chan string)
 	for counter, input := range inputs {
-		go func(ch <-chan string, co int) {
+		go func(ch <-chan signal, co int) {
 			for {
-				c <- getTag(co) + <-ch
+				s := <-ch
+				if s.done {
+					break
+				}
+				c <- getTag(co) + s.data
 				time.Sleep(time.Duration(rand.Intn(1e3)) * time.Millisecond)
 			}
 		}(input, counter)
@@ -44,28 +63,36 @@ func fanIn(inputs ...<-chan string) <-chan string {
 	return c
 }
 
+// format the output
 func getTag(c int) string {
-	var tag string
-	for i := 0; i < c+1; i++ {
-		tag += ">>"
-	}
-	return tag
+	return strconv.Itoa(c) + " > "
 }
 
+// multiplexing call the fanIn function, the parameters countDown function
+// listening on the channel what return by the fanIn function
+// there is a select inside the listener function to avoid the deadlock
 func multiplexing() {
 	c := fanIn(countDownGeneratorString(12), countDownGeneratorString(4), countDownGeneratorString(7))
-	for i := 0; i < 30; i++ {
-		fmt.Println(<-c)
+	for {
+		select {
+		case value := <-c:
+			fmt.Println(value)
+		default:
+		}
 	}
 }
 
-func countDownGeneratorString(from int) <-chan string {
-	c := make(chan string)
+// the function get an initial variable and start to count down
+// each number take into channel, the signal type of channel store the data and
+// the done cancellation option
+func countDownGeneratorString(from int) <-chan signal {
+	c := make(chan signal)
 	go func() {
 		for i := from; i > 0; i-- {
-			c <- strconv.Itoa(i)
+			c <- newSignal(strconv.Itoa(i), false)
 			time.Sleep(time.Duration(rand.Intn(1e3)) * time.Millisecond)
 		}
+		c <- newSignal("", true)
 		close(c)
 	}()
 	return c
