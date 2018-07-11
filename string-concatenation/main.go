@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 )
 
@@ -18,4 +19,14 @@ func stringConcat(str ...string) string {
 		result += e
 	}
 	return result
+}
+
+func stringConcatBuffer(str ...string) string {
+	var buffer bytes.Buffer
+
+	for _, e := range str {
+		buffer.WriteString(e)
+	}
+
+	return buffer.String()
 }
