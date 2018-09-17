@@ -32,6 +32,9 @@ func TestWorker(t *testing.T) {
 	if resp.(string) != "1234" {
 		t.Errorf("Worker should return '1234', instead of %s", resp.(string))
 	}
+	if w.Pending() != 0 {
+		t.Errorf("Pending should be 0, instead of %d", w.Pending())
+	}
 
 	w.Close()
 }

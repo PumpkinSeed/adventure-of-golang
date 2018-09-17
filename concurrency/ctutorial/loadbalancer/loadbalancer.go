@@ -1,24 +1,35 @@
 package loadbalancer
 
+import (
+	"sync"
+)
+
 const maxRequestPerWorker = 10
 
 type Balancer struct {
-	workerFunc func(req Request) interface{}
-
-	workers []Worker
-
+	workerFunc          func(req Request) interface{}
+	workers             []*Worker
+	requestChan         chan Request
 	maxRequestPerWorker int
+	idState             int
+	workersMutex        *sync.RWMutex
+	debug               bool
 }
 
 func NewBalancer(workerFunc func(req Request) interface{}) Balancer {
 	//queueMutex := sync.RWMutex{}
 	return Balancer{
-		workerFunc: workerFunc,
+		workerFunc:          workerFunc,
+		idState:             0,
+		workersMutex:        &sync.RWMutex{},
+		maxRequestPerWorker: maxRequestPerWorker,
 	}
 }
 
-func (b *Balancer) Add(r *Request) {
-
+func (b *Balancer) Add(data interface{}) chan interface{} {
+	var req = NewRequest(data)
+	b.requestChan <- req
+	return req.resp
 }
 
 func (b *Balancer) SetMaxRequestPerWorker(n int) {
@@ -27,6 +38,61 @@ func (b *Balancer) SetMaxRequestPerWorker(n int) {
 
 func (b *Balancer) Balance() {
 	for {
-
+		select {
+		case req := <-b.requestChan:
+			b.handleRequest(req)
+		default:
+			b.scale()
+			b.clean()
+		}
 	}
+}
+
+func (b *Balancer) SetDebug(debug bool) {
+	b.debug = debug
+}
+
+func (b *Balancer) handleRequest(req Request) {
+	for _, worker := range b.workers {
+		if worker.IsRunning() && worker.Pending() < b.maxRequestPerWorker {
+			worker.Request(req)
+		} else {
+			b.scale()
+			b.handleRequest(req)
+		}
+	}
+}
+
+func (b *Balancer) clean() {
+	for i, worker := range b.workers {
+		if !worker.IsRunning() && worker.Pending() < 1 {
+			b.workersMutex.Lock()
+			b.workers = append(b.workers[:i], b.workers[i+1:]...)
+			b.workersMutex.Unlock()
+		}
+	}
+}
+
+func (b *Balancer) scale() {
+	if len(b.workers) < 1 {
+		b.addWorker()
+	}
+	var available bool
+	for _, worker := range b.workers {
+		if worker.IsRunning() && worker.Pending() < b.maxRequestPerWorker {
+			available = true
+		} else if !worker.IsRunning() {
+			worker.SetPending(0)
+		}
+	}
+	if !available {
+		b.addWorker()
+	}
+}
+
+func (b *Balancer) addWorker() {
+	w := NewWorker(b.idState, b.workerFunc)
+	b.idState++
+
+	b.workers = append(b.workers, w)
 }
