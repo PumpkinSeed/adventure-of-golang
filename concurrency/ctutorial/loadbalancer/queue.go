@@ -5,16 +5,16 @@ import (
 )
 
 type Queue struct {
-	repo  []*Request
+	repo  []interface{}
 	front int
 	back  int
 	len   int
-	mutex *sync.RWMutex
+	mutex *sync.RWMutex // @TODO lock data on read
 }
 
 func NewQueue(mutex *sync.RWMutex) *Queue {
 	q := new(Queue)
-	q.repo = make([]*Request, 1)
+	q.repo = make([]interface{}, 1)
 	q.front, q.back, q.len = 0, 0, 0
 	q.mutex = mutex
 	return q
@@ -24,21 +24,21 @@ func (q Queue) Len() int {
 	return q.len
 }
 
-func (q Queue) Front() *Request {
+func (q Queue) Front() interface{} {
 	q.mutex.RLock()
 	defer q.mutex.RUnlock()
 
 	return q.repo[q.front]
 }
 
-func (q Queue) Back() *Request {
+func (q Queue) Back() interface{} {
 	q.mutex.RLock()
 	defer q.mutex.RUnlock()
 
 	return q.repo[q.dec(q.back)]
 }
 
-func (q *Queue) PushFront(r *Request) {
+func (q *Queue) PushFront(r interface{}) {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
@@ -48,7 +48,7 @@ func (q *Queue) PushFront(r *Request) {
 	q.len++
 }
 
-func (q *Queue) PushBack(r *Request) {
+func (q *Queue) PushBack(r interface{}) {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
@@ -58,7 +58,7 @@ func (q *Queue) PushBack(r *Request) {
 	q.len++
 }
 
-func (q *Queue) PopFront() *Request {
+func (q *Queue) PopFront() interface{} {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
@@ -73,7 +73,7 @@ func (q *Queue) PopFront() *Request {
 	return r
 }
 
-func (q *Queue) PopBack() *Request {
+func (q *Queue) PopBack() interface{} {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
@@ -89,7 +89,7 @@ func (q *Queue) PopBack() *Request {
 }
 
 func (q *Queue) resize(size int) {
-	adjusted := make([]*Request, size)
+	adjusted := make([]interface{}, size)
 	if q.front < q.back {
 		copy(adjusted, q.repo[q.front:q.back])
 	} else {

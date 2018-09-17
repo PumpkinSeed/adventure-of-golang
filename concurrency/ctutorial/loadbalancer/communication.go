@@ -5,7 +5,8 @@ type Request struct {
 	resp chan interface{}
 }
 
-func NewRequest(data interface{}) chan interface{} {
+func NewRequest(b Balancer, data interface{}) chan interface{} {
+	resp := make(chan interface{}, 1)
 
-	return nil
+	return resp
 }
