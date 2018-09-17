@@ -3,6 +3,7 @@ package loadbalancer
 import (
 	"log"
 	"sync"
+	"time"
 )
 
 const maxRequestPerWorker = 10
@@ -71,6 +72,8 @@ func (b *Balancer) handleRequest(req Request) {
 			worker.Request(req)
 		} else {
 			b.scale()
+			time.Sleep(100 * time.Millisecond)
+			// @TODO fix this
 			b.handleRequest(req)
 		}
 	}
@@ -105,6 +108,8 @@ func (b *Balancer) scale() {
 }
 
 func (b *Balancer) addWorker() {
+	b.workersMutex.Lock()
+	defer b.workersMutex.Unlock()
 	w := NewWorker(b.idState, b.workerFunc)
 	b.idState++
 	go w.Work()
