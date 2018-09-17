@@ -8,6 +8,8 @@ import (
 
 const maxRequestPerWorker = 10
 
+// @TODO add context with cancel
+
 type Balancer struct {
 	workerFunc          func(req Request) interface{}
 	workers             []*Worker
@@ -40,14 +42,24 @@ func (b *Balancer) SetMaxRequestPerWorker(n int) {
 
 func (b *Balancer) Balance() {
 	b.scale()
+	timeTick := time.Tick(10 * time.Millisecond)
 	for {
 		select {
 		case req := <-b.requestChan:
 			b.DebugLog("handle request")
 			b.handleRequest(req)
-		default:
-			//	b.scale()
+		case <-timeTick:
+			b.scale()
 			b.clean()
+		}
+	}
+}
+
+func (b *Balancer) Interrupt() {
+	close(b.requestChan)
+	for _, worker := range b.workers {
+		if worker.IsRunning() {
+			worker.Close()
 		}
 	}
 }

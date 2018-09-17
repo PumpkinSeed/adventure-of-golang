@@ -6,9 +6,12 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/fortytw2/leaktest"
 )
 
 func TestLoadBalancer(t *testing.T) {
+	defer leaktest.Check(t)()
 	worker := func(req Request) interface{} {
 		//time.Sleep(200 * time.Millisecond)
 		return base64.StdEncoding.EncodeToString([]byte(req.data.(string)))
@@ -21,7 +24,7 @@ func TestLoadBalancer(t *testing.T) {
 	var counterLock = &sync.RWMutex{}
 	for i := 0; i < 22; i++ {
 		var wg = sync.WaitGroup{}
-		for j := 0; j < 10; j++ {
+		for j := 0; j < 10000; j++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -40,11 +43,11 @@ func TestLoadBalancer(t *testing.T) {
 				counterLock.Unlock()
 
 			}()
-			fmt.Println(b.NumOfWorkers())
+			//fmt.Println(b.NumOfWorkers())
 		}
 		wg.Wait()
 	}
 	//time.Sleep(100*time.Millisecond)
 	fmt.Println(counter)
-
+	//b.Interrupt()
 }
