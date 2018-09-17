@@ -1,6 +1,7 @@
 package loadbalancer
 
 import (
+	"log"
 	"sync"
 )
 
@@ -17,12 +18,12 @@ type Balancer struct {
 }
 
 func NewBalancer(workerFunc func(req Request) interface{}) Balancer {
-	//queueMutex := sync.RWMutex{}
 	return Balancer{
 		workerFunc:          workerFunc,
 		idState:             0,
 		workersMutex:        &sync.RWMutex{},
 		maxRequestPerWorker: maxRequestPerWorker,
+		requestChan:         make(chan Request),
 	}
 }
 
@@ -37,12 +38,14 @@ func (b *Balancer) SetMaxRequestPerWorker(n int) {
 }
 
 func (b *Balancer) Balance() {
+	b.scale()
 	for {
 		select {
 		case req := <-b.requestChan:
+			b.DebugLog("handle request")
 			b.handleRequest(req)
 		default:
-			b.scale()
+			//	b.scale()
 			b.clean()
 		}
 	}
@@ -50,6 +53,16 @@ func (b *Balancer) Balance() {
 
 func (b *Balancer) SetDebug(debug bool) {
 	b.debug = debug
+}
+
+func (b *Balancer) NumOfWorkers() int {
+	return len(b.workers)
+}
+
+func (b Balancer) DebugLog(msg string) {
+	if b.debug {
+		log.Println(msg)
+	}
 }
 
 func (b *Balancer) handleRequest(req Request) {
@@ -66,6 +79,7 @@ func (b *Balancer) handleRequest(req Request) {
 func (b *Balancer) clean() {
 	for i, worker := range b.workers {
 		if !worker.IsRunning() && worker.Pending() < 1 {
+			worker.Close()
 			b.workersMutex.Lock()
 			b.workers = append(b.workers[:i], b.workers[i+1:]...)
 			b.workersMutex.Unlock()
@@ -93,6 +107,6 @@ func (b *Balancer) scale() {
 func (b *Balancer) addWorker() {
 	w := NewWorker(b.idState, b.workerFunc)
 	b.idState++
-
+	go w.Work()
 	b.workers = append(b.workers, w)
 }
