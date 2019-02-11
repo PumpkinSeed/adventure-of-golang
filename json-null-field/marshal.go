@@ -8,10 +8,11 @@ import (
 )
 
 type Test struct {
-	TestString null.String `json:"test_string"`
-	TestUin64  null.Uint64
-	TestU64    uint64
-	TestU32    null.Uint32 `json:"testu32,omitempty"`
+	TestString      null.String `json:"test_string"`
+	TestStringValue null.String `json:"tsv,omitempty"`
+	TestUin64       null.Uint64
+	TestU64         uint64
+	TestU32         null.Uint32 `json:"testu32,omitempty"`
 }
 
 func main() {
@@ -28,4 +29,6 @@ func main() {
 	json.Unmarshal(res, &t2)
 
 	fmt.Println(t2)
+
+	fmt.Println(t2.TestStringValue.String)
 }
