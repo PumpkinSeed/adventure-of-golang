@@ -1,0 +1,12 @@
+version: "3"
+services:
+  percona:
+    container_name: percona
+    image: "percona"
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: test
+      MYSQL_DATABASE: test
+      MYSQL_USER: test
+      MYSQL_PASSWORD: test
