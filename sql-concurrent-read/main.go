@@ -19,6 +19,9 @@ func main() {
 	}
 	defer db.Close()
 
+	db.SetMaxOpenConns(3)
+	db.SetMaxIdleConns(1)
+	db.SetConnMaxLifetime(time.Hour)
 	//createTable(db)
 	insert(db)
 
@@ -28,12 +31,12 @@ func main() {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup) {
 			var id int
-			mesIn := time.Now()
+			//mesIn := time.Now()
 			err = db.QueryRow("SELECT PersonID FROM Persons;").Scan(&id)
 			if err != nil {
 				panic(err.Error()) // proper error handling instead of panic in your app
 			}
-			fmt.Printf("Time and number: %d -> %s\n", id, time.Since(mesIn))
+			//fmt.Printf("Time and number: %d -> %s\n", id, time.Since(mesIn))
 			wg.Done()
 		}(wg)
 	}
