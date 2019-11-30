@@ -2,4 +2,4 @@ run:
 	go run main.go
 
 build:
-	go build -gcflags "-m -m" -o binary_code_example_1
+	go build -gcflags "-m -m -m" -o binary_code_example_1
