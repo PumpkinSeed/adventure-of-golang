@@ -1,1 +1,3 @@
 binary_*
+*.out
+*.test
